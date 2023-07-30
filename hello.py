@@ -2,10 +2,15 @@ from flask import Flask, request, jsonify
 import openai
 from flask_cors import CORS
 import os
-
+from dotenv import load_dotenv, find_dotenv
 app = Flask(__name__)
 CORS(app)
-openai.api_key = "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"
+
+# OpenAI API key
+# Either direclty set or fetch it from environment variable
+
+load_dotenv(find_dotenv())
+openai.api_key = os.environ.get("OPENAI_API_KEY")
 
 
 @app.route('/incog')
@@ -21,9 +26,10 @@ def api():
         "Request body must be JSON and include a 'userPrompt' key")
 
     user_prompt = request.json['userPrompt']
-    print("User Prompt: " + user_prompt)
 
     # First OpenAI API call
+    # Note: This Redaction of API call is supposed to be done server running on local system. 
+    # We had difficuly setting up local models on our system. So for demo sake we are using OpenAI API.
     private_prompt = openai.ChatCompletion.create(
       model=
       "gpt-4",  # replace this with the correct model name for GPT-4 when it becomes available
@@ -31,10 +37,7 @@ def api():
         {
           "role":
           "system",
-          "content":
-          # "Modify this prompt and return a prompt which does not have any personal information."
-        #   "Rephrase the prompt masking any personal information like name, address, location, organisation name, age"
-        "Remove any personal information from the prompt like name, address, location, organisation name, age. Dont remove that information which is necessary for the prompt to make sense."
+          "content":"Remove any personal information from the prompt like name, address, location, organisation name, age. Dont remove that information which is necessary for the prompt to make sense."
         },
         {
           "role": "user",
@@ -43,9 +46,6 @@ def api():
       ])
 
     first_response = private_prompt['choices'][0]['message']['content']
-    print("\n")
-    print("First response: " + first_response)
-    print("\n")
 
     # Second OpenAI API call
     response = openai.ChatCompletion.create(model="gpt-4",
@@ -57,15 +57,6 @@ def api():
                                             ])
 
     final_response = response['choices'][0]['message']['content']
-    print("Second response: " + final_response)
-
-    print("\n")
-    print("---------------------")
-    print("\n")
-
-    #record userPrompt, privatePrompt, and response to a csv file
-    with open('data.csv', 'a') as f:
-      f.write(f"{user_prompt},{first_response},{final_response}\n")
 
     return jsonify(infoData=first_response, chatData=final_response)
 
@@ -78,5 +69,3 @@ def api():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=8080)
-
-
